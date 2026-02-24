@@ -5,7 +5,7 @@ from enum import Enum
 import numpy as np
 
 from udacidrone import Drone
-from udacidrone.connection import MavlinkConnection, WebSocketConnection  # noqa: F401
+from udacidrone.connection import MavlinkConnection
 from udacidrone.messaging import MsgID
 
 
@@ -30,17 +30,13 @@ class BackyardFlyer(Drone):
         # initial state
         self.flight_state = States.MANUAL
 
-        # TODO: Register all your callbacks here
+        # Register callbacks
         self.register_callback(MsgID.LOCAL_POSITION, self.local_position_callback)
         self.register_callback(MsgID.LOCAL_VELOCITY, self.velocity_callback)
         self.register_callback(MsgID.STATE, self.state_callback)
 
     def local_position_callback(self):
-        """
-        TODO: Implement this method
-
-        This triggers when `MsgID.LOCAL_POSITION` is received and self.local_position contains new data
-        """
+        """Handles LOCAL_POSITION messages to manage takeoff and waypoint navigation."""
         if self.flight_state == States.TAKEOFF:
             if -1.0 * self.local_position[2] > 0.95 * self.target_position[2]:
                 self.all_waypoints = self.calculate_box()
@@ -54,22 +50,14 @@ class BackyardFlyer(Drone):
                         self.landing_transition()
 
     def velocity_callback(self):
-        """
-        TODO: Implement this method
-
-        This triggers when `MsgID.LOCAL_VELOCITY` is received and self.local_velocity contains new data
-        """
+        """Handles LOCAL_VELOCITY messages to trigger disarming after landing."""
         if self.flight_state == States.LANDING:
             if self.global_position[2] - self.global_home[2] < 0.1:
                 if abs(self.local_position[2]) < 0.01:
                     self.disarming_transition()
 
     def state_callback(self):
-        """
-        TODO: Implement this method
-
-        This triggers when `MsgID.STATE` is received and self.armed and self.guided contain new data
-        """
+        """Handles STATE messages to drive the mission state machine."""
         if self.in_mission:
             if self.flight_state == States.MANUAL:
                 self.arming_transition()
@@ -81,23 +69,14 @@ class BackyardFlyer(Drone):
                     self.manual_transition()
 
     def calculate_box(self):
-        """TODO: Fill out this method
-        
-        1. Return waypoints to fly a box
-        """
+        """Return waypoints to fly a box pattern."""
         print("Setting Home")
         ##local_waypoints = [[10.0, 0.0, 3.0], [10.0, 10.0, 3.0], [0.0, 10.0, 3.0], [0.0, 0.0, 3.0]]
         local_waypoints = [[30.0, 0.0, 3.0], [30.0, 30.0, 3.0], [0.0, 30.0, 3.0], [0.0, 0.0, 3.0]]
         return local_waypoints
 
     def arming_transition(self):
-        """TODO: Fill out this method
-        
-        1. Take control of the drone
-        2. Pass an arming command
-        3. Set the home location to current position
-        4. Transition to the ARMING state
-        """
+        """Take control, arm, and set home position."""
         print("arming transition")
         self.take_control()
         self.arm()
@@ -107,12 +86,7 @@ class BackyardFlyer(Drone):
         self.flight_state = States.ARMING
 
     def takeoff_transition(self):
-        """TODO: Fill out this method
-        
-        1. Set target_position altitude to 3.0m
-        2. Command a takeoff to 3.0m
-        3. Transition to the TAKEOFF state
-        """
+        """Command takeoff to target altitude."""
         print("takeoff transition")
         # self.global_home = np.copy(self.global_position)  # can't write to this variable!
         target_altitude = 3.0
@@ -121,11 +95,7 @@ class BackyardFlyer(Drone):
         self.flight_state = States.TAKEOFF
 
     def waypoint_transition(self):
-        """TODO: Fill out this method
-    
-        1. Command the next waypoint position
-        2. Transition to WAYPOINT state
-        """
+        """Navigate to the next waypoint."""
         print("waypoint transition")
         self.target_position = self.all_waypoints.pop(0)
         print('target position', self.target_position)
@@ -133,21 +103,13 @@ class BackyardFlyer(Drone):
         self.flight_state = States.WAYPOINT
 
     def landing_transition(self):
-        """TODO: Fill out this method
-        
-        1. Command the drone to land
-        2. Transition to the LANDING state
-        """
+        """Command landing."""
         print("landing transition")
         self.land()
         self.flight_state = States.LANDING
 
     def disarming_transition(self):
-        """TODO: Fill out this method
-        
-        1. Command the drone to disarm
-        2. Transition to the DISARMING state
-        """
+        """Disarm and release control."""
         print("disarm transition")
         self.disarm()
         self.release_control()
